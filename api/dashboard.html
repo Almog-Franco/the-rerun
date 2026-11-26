@@ -1,0 +1,61 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Exposure Rollup</title>
+<style>
+  :root { color-scheme: light dark; --ink:#14181f; --ink2:#5a6270; --rule:#dbe0e8;
+          --bg:#f6f7fa; --card:#fff; --crit:#a93b2e; --high:#a9701a; --med:#2c4a7c; --low:#5a6270; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#e7eaef; --ink2:#9aa3b1; --rule:#28303b; --bg:#0e1218; --card:#161b23;
+            --crit:#e0796a; --high:#d6a44f; --med:#8fb2e2; --low:#9aa3b1; }
+  }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+  main { max-width:940px; margin:0 auto; padding:48px 24px 80px; }
+  h1 { font-size:1.6rem; margin:0 0 4px; font-weight:600; }
+  .sub { color:var(--ink2); font-size:.9rem; margin-bottom:32px; }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; background:var(--rule);
+           border:1px solid var(--rule); border-radius:3px; margin-bottom:32px; }
+  .tile { background:var(--card); padding:18px 20px; }
+  .tile .k { font-size:.68rem; text-transform:uppercase; letter-spacing:.1em; color:var(--ink2); }
+  .tile .v { font-size:1.7rem; font-weight:600; font-variant-numeric:tabular-nums; margin-top:4px; }
+  .tile.crit .v { color:var(--crit); } .tile.high .v { color:var(--high); }
+  table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--rule); border-radius:3px; }
+  th { text-align:left; font-size:.68rem; text-transform:uppercase; letter-spacing:.1em; color:var(--ink2);
+       padding:11px 16px; border-bottom:1px solid var(--rule); }
+  td { padding:11px 16px; border-bottom:1px solid var(--rule); font-variant-numeric:tabular-nums; }
+  tr:last-child td { border-bottom:0; }
+  td.n { text-align:right; font-weight:500; }
+  .foot { margin-top:20px; font-size:.8rem; color:var(--ink2); }
+  code { font-family:ui-monospace,Menlo,monospace; font-size:.85em; }
+</style>
+<main>
+  <h1>Exposure Rollup</h1>
+  <p class="sub">Daily sightings by severity, served from <code>daily_severity_rollup</code>.</p>
+  <div class="tiles" id="tiles"></div>
+  <table>
+    <thead><tr><th>Day (UTC)</th><th>Severity</th><th class="n">Sightings</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <p class="foot" id="foot"></p>
+</main>
+<script>
+const fmt = n => n.toLocaleString();
+async function load() {
+  const [s, r] = await Promise.all([
+    fetch('/api/summary').then(x => x.json()),
+    fetch('/api/rollup').then(x => x.json()),
+  ]);
+  const sev = s.by_severity || {};
+  document.getElementById('tiles').innerHTML = `
+    <div class="tile"><div class="k">Total sightings</div><div class="v" data-t="total">${fmt(s.total_sightings)}</div></div>
+    <div class="tile crit"><div class="k">Critical</div><div class="v">${fmt(sev.critical || 0)}</div></div>
+    <div class="tile high"><div class="k">High</div><div class="v">${fmt(sev.high || 0)}</div></div>
+    <div class="tile"><div class="k">Findings</div><div class="v">${fmt(s.findings)}</div></div>
+    <div class="tile"><div class="k">Batches</div><div class="v">${fmt(s.batches_processed)}</div></div>`;
+  document.getElementById('rows').innerHTML = r.rows.map(x =>
+    `<tr><td>${x.day}</td><td>${x.severity}</td><td class="n">${fmt(x.n)}</td></tr>`).join('')
+    || '<tr><td colspan="3">No data. Run <code>pipeline run --all</code>.</td></tr>';
+  document.getElementById('foot').textContent =
+    `${r.rows.length} rollup rows · ${s.batches_processed} batches processed`;
+}
+load();
+</script>

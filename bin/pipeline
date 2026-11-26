@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Ingestion pipeline entry point.
+set -euo pipefail
+root="$(cd "$(dirname "$0")/.." && pwd)"
+
+if [ ! -x "$root/.venv/bin/python" ]; then
+  echo "no virtualenv at $root/.venv — run 'make install' first" >&2
+  exit 1
+fi
+
+# Run from the repo root so the pipeline package is importable no matter
+# which directory this was invoked from.
+cd "$root"
+exec .venv/bin/python -m pipeline.cli "$@"

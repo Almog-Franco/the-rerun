@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: rerun-db
+    environment:
+      POSTGRES_USER: qa
+      POSTGRES_PASSWORD: qa
+      POSTGRES_DB: ingest
+      # Local dev boxes are not UTC. The rollup is specified as a UTC day
+      # bucket (contract G5), so the pipeline converts explicitly.
+      TZ: Asia/Jerusalem
+      PGTZ: Asia/Jerusalem
+    command: >
+      postgres -c timezone=Asia/Jerusalem
+               -c log_timezone=Asia/Jerusalem
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U qa -d ingest"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
